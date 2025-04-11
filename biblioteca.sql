@@ -407,10 +407,7 @@ describe tbl_prestamos;
 -- Vamos a insertar usuarios
 INSERT INTO tbl_usuarios(numero_carnet, nombre_usuario, apellido_usuario, fecha_nacimiento)
 VALUES (FLOOR(RAND()*(99999999-10000000+1))+10000000, "Pepe", "García Lopez", "2004-02-13")
-;
-
-INSERT INTO tbl_usuarios(numero_carnet, nombre_usuario, apellido_usuario, fecha_nacimiento)
-VALUES (FLOOR(RAND()*(99999999-10000000+1))+10000000, "Paco", "Lopez Martinez", "2000-04-22"),
+(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Paco", "Lopez Martinez", "2000-04-22"),
 (FLOOR(RAND()*(99999999-10000000+1))+10000000, "Pedro", "Rodriguez Gomez", "1999-01-18"),
 (FLOOR(RAND()*(99999999-10000000+1))+10000000, "Marta", "Azuara", "1970-06-22"),
 (FLOOR(RAND()*(99999999-10000000+1))+10000000, "Elena", "Garcia Garcia", "1990-03-20"),
@@ -433,11 +430,75 @@ VALUES (1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (3, 1)
 
 select * from tbl_prestamos;
 
+-- NATURAL JOIN sirve para hacer un INNER JOIN (o JOIN a secas)
+-- cuando los ids de relación se llaman igual
+SELECT us.nombre_usuario, us.apellido_usuario, li.titulo, pr.fecha_prestamo
+FROM tbl_usuarios us
+NATURAL JOIN tbl_prestamos pr
+NATURAL JOIN libros li;
 
+-- Selección de usuarios que no han tomado un libro prestado
+SELECT us.nombre_usuario, us.apellido_usuario, pr.fecha_prestamo
+FROM tbl_usuarios us
+LEFT JOIN tbl_prestamos pr
+ON us.id_usuario = pr.id_usuario
+WHERE fecha_prestamo is null;
+
+alter table usuarios
+RENAME COLUMN apellido to apellido_usuario;
+
+-- Selección de cuantos libros ha cogido cada usuario
+SELECT us.nombre_usuario, us.apellido_usuario, COUNT(id_libro) as librosPrestados
+FROM tbl_usuarios us
+natural join tbl_prestamos pr
+natural join libros li
+GROUP by us.id_usuario;
 
 --  NECESITAMOS SABER...
 -- Qué usuarios han tomado prestados libros de editoriales de Barcelona
+
+SELECT us.nombre_usuario, us.apellido_usuario, ed.nombre_editorial, po.nombre_poblacion, pr.fecha_prestamo
+FROM tbl_usuarios us
+natural JOIN tbl_prestamos pr
+natural JOIN tbl_editoriales ed
+natural JOIN tbl_poblaciones po
+-- ON us.id_usuario = pr.id_usuario
+WHERE nombre_poblacion = "Barcelona";
+
 -- Cuántos libros hay de editoriales que no son de Barcelona
+
+select li.titulo, ed.nombre_editorial, po.nombre_poblacion
+from libros li
+natural JOIN tbl_editoriales ed
+natural JOIN tbl_poblaciones po
+WHERE nombre_poblacion not in ("Barcelona");
+
 -- Cuántos libros tenemos que empiecen por p
+
+SELECT COUNT(id_libro) as librosConP
+FROM libros where titulo like "P%" or titulo like "p%";
+
 -- Cuál es el libro más prestado
+
+select pr.id_libro, li.titulo, librosMasPrestados
+FROM tbl_prestamos pr
+natural join libros li
+where librosMasPrestados = (max( select COUNT(id_libro) FROM tbl_prestamos pr group by id_libro));
+ -- Hasy que sacar el id_libro en base al numero MAX de MasPrestados
+select max(id_libro) from (select id_libro, COUNT(id_libro) as MasPrestados FROM tbl_prestamos group by id_libro) ;
+select id_libro, COUNT(id_libro) as MasPrestados FROM tbl_prestamos group by id_libro;
+
+SELECT titulo, ejemplares
+FROM libros
+WHERE ejemplares = (SELECT MAX(ejemplares)FROM libros);
+SELECT MAX(ejemplares)FROM libros;
+SELECT ejemplares FROM libros;
+
 -- Qué usuarios han leido el libro más prestado
+
+-- Borra el libro con id_libro = 6
+-- Añade la editorial Mondadori, de Milán
+-- Añade el libro "Ciudadanos", del autor Simón Schama, género "política", editado en 2022
+-- Obtén el libro o libros de más reciente publicación
+-- Obtén la editorial cuyos libros son los más prestados
+
