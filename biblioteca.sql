@@ -395,10 +395,12 @@ ALTER TABLE libros RENAME COLUMN id to id_libro;
 
 create table tbl_prestamos (
 id_prestamo int not null auto_increment primary key,
-id_usuario int unique not null,
-id_libro int unique not null,
+id_usuario int not null,
+id_libro int not null,
 fecha_prestamo timestamp DEFAULT CURRENT_TIMESTAMP
 );
+
+-- drop table tbl_prestamos ;
 
 describe tbl_prestamos;
 
@@ -410,13 +412,32 @@ VALUES (FLOOR(RAND()*(99999999-10000000+1))+10000000, "Pepe", "García Lopez", "
 INSERT INTO tbl_usuarios(numero_carnet, nombre_usuario, apellido_usuario, fecha_nacimiento)
 VALUES (FLOOR(RAND()*(99999999-10000000+1))+10000000, "Paco", "Lopez Martinez", "2000-04-22"),
 (FLOOR(RAND()*(99999999-10000000+1))+10000000, "Pedro", "Rodriguez Gomez", "1999-01-18"),
-(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Marta", "Azuara", "1960-06-22"),
-(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Elena", "Garcia Garcia", "2000-04-22"),
-(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Adria", "Lopez Martinez", "2000-04-22"),
-(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Andres", "Lopez Martinez", "2000-04-22"),
-(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Jordi", "Lopez Martinez", "2000-04-22"),
-(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Manuela", "Lopez Martinez", "2000-04-22"),
-(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Pedro", "Lopez Martinez", "2000-04-22")
+(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Marta", "Azuara", "1970-06-22"),
+(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Elena", "Garcia Garcia", "1990-03-20"),
+(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Adria", "Diaz Martinez", "1980-05-23"),
+(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Andres", "Vazquez Martinez", "1974-01-02"),
+(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Jordi", "Lopez Nicolau", "2005-02-01"),
+(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Manuela", "Cuchillo Martinez", "2001-08-31"),
+(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Juan", "Martinez Gomez", "2010-07-23"),
+(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Eduardo", "Cunchillo Vivar", "1960-10-20"),
+(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Manuela", "Cuchillo Birba", "1962-12-21"),
+(FLOOR(RAND()*(99999999-10000000+1))+10000000, "Pedro", "Rodriguez Cebolla", "1998-12-12")
 ;
 
 select * from tbl_usuarios;
+
+-- Vamos a insertar prestamos
+INSERT INTO tbl_prestamos(id_usuario, id_libro)
+VALUES (1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (3, 1)
+;
+
+select * from tbl_prestamos;
+
+
+
+--  NECESITAMOS SABER...
+-- Qué usuarios han tomado prestados libros de editoriales de Barcelona
+-- Cuántos libros hay de editoriales que no son de Barcelona
+-- Cuántos libros tenemos que empiecen por p
+-- Cuál es el libro más prestado
+-- Qué usuarios han leido el libro más prestado
