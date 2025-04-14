@@ -484,9 +484,13 @@ select pr.id_libro, li.titulo, librosMasPrestados
 FROM tbl_prestamos pr
 natural join libros li
 where librosMasPrestados = (max( select COUNT(id_libro) FROM tbl_prestamos pr group by id_libro));
- -- Hasy que sacar el id_libro en base al numero MAX de MasPrestados
-select max(id_libro) from (select id_libro, COUNT(id_libro) as MasPrestados FROM tbl_prestamos group by id_libro) ;
-select id_libro, COUNT(id_libro) as MasPrestados FROM tbl_prestamos group by id_libro;
+ -- Hay que sacar el id_libro en base al numero MAX de MasPrestados
+select id_libro, titulo 
+from libros 
+where id_libro = (select COUNT(id_libro) as MasPrestados FROM tbl_prestamos group by id_libro);
+
+select max(masprestados) from masprestados =
+(select COUNT(id_libro) as MasPrestados FROM tbl_prestamos group by id_libro);
 
 SELECT titulo, ejemplares
 FROM libros
@@ -501,4 +505,23 @@ SELECT ejemplares FROM libros;
 -- Añade el libro "Ciudadanos", del autor Simón Schama, género "política", editado en 2022
 -- Obtén el libro o libros de más reciente publicación
 -- Obtén la editorial cuyos libros son los más prestados
+
+select l.titulo, count(l.id_libro)
+from libros l
+natural join tbl_prestamos p
+group by l.id_libro
+having count(l.id_libro) = 3;
+
+alter table libros
+add constraint fk_editorial
+foreign key (id_editorial)
+references tbl_editoriales(id_editorial)
+-- on delete cascade -- borra sin restricciones
+-- on update cascade -- lo mismo
+-- on delete set null -- pone un nulo y pierdo la información
+-- on update set null -- lo mismo
+on delete restrict -- solo borra si no hay más elemntos asociados
+on update restrict
+;
+
 
