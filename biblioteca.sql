@@ -480,25 +480,39 @@ FROM libros where titulo like "P%" or titulo like "p%";
 
 -- Cuál es el libro más prestado
 
-select pr.id_libro, li.titulo, librosMasPrestados
-FROM tbl_prestamos pr
-natural join libros li
-where librosMasPrestados = (max( select COUNT(id_libro) FROM tbl_prestamos pr group by id_libro));
- -- Hay que sacar el id_libro en base al numero MAX de MasPrestados
-select id_libro, titulo 
-from libros 
-where id_libro = (select COUNT(id_libro) as MasPrestados FROM tbl_prestamos group by id_libro);
+-- Hacemos una primera querie que nos devulva los titulos y las cantidades
+select li.titulo, pr.id_libro, COUNT(id_libro) as MasPrestado -- Seleccionamos titulo, id_libro y el conteo de los prestamos
+FROM tbl_prestamos pr -- seleccionamos la primera tabla
+natural join libros li -- Unimos con la segunda tabla
+group by id_libro -- Agrupamos por id_libro para sumar las repeticiones
+-- Una vez que esto funciona vamos a filtrar
+-- Con el having filtramos
+having MasPrestado = -- Establecemos el campo por el que queremos filtrar 
+( select COUNT(id_libro) as MasPrestado FROM tbl_prestamos group by id_libro order by MasPrestado DESC limit 1 ); -- Esta querie la explico debajo, es la que nos devuelve el numero más grande
 
-select max(masprestados) from masprestados =
-(select COUNT(id_libro) as MasPrestados FROM tbl_prestamos group by id_libro);
-
-SELECT titulo, ejemplares
-FROM libros
-WHERE ejemplares = (SELECT MAX(ejemplares)FROM libros);
-SELECT MAX(ejemplares)FROM libros;
-SELECT ejemplares FROM libros;
+-- Hacemos una segunda querie que nos devuelva el número más grande
+-- Buscamos/Filtramos el numero más grande del conteo de los prestamos
+select COUNT(id_libro) as MasPrestado -- Seleccionamos y contamos los libros en una nueva columna
+FROM tbl_prestamos -- de la tabla de prestamos
+group by id_libro -- agrupamos el conteo por id_libro
+order by MasPrestado DESC -- para poder filtrar bien los ordenamos de mayor a menor
+limit 1; -- Indicamos que solo nos coja el número máximo
 
 -- Qué usuarios han leido el libro más prestado
+
+select us.nombre_usuario, li.titulo, id_libro
+FROM libros li
+natural join tbl_prestamos pr
+natural join tbl_usuarios us
+order by li.id_libro;
+HAVING id_libro = (;
+
+
+select id_libro, COUNT(id_libro) as MasPrestado FROM tbl_prestamos pr natural join libros li group by id_libro 
+having MasPrestado = (select id_libro, COUNT(id_libro) as MasPrestado FROM tbl_prestamos group by id_libro order by MasPrestado DESC limit 1);
+
+);
+
 
 -- Borra el libro con id_libro = 6
 -- Añade la editorial Mondadori, de Milán
@@ -524,4 +538,22 @@ on delete restrict -- solo borra si no hay más elemntos asociados
 on update restrict
 ;
 
+describe libros;
+use biblioteca;
 
+-- De los libros en prestamo cual es el titulo, la editorial y la población, vamos a crear una vista
+CREATE or replace view vista as
+select distinct li.titulo, ed.nombre_editorial, po.nombre_poblacion -- , pr.fecha_prestamo
+from libros li
+natural join tbl_prestamos pr
+natural join tbl_editoriales ed
+natural join tbl_poblaciones po
+;
+
+select * from vista;
+-- drop view vista;
+
+-- El usuario con id 4 hace un prestamo del libro con id 4
+INSERT INTO tbl_prestamos(id_usuario, id_libro)
+VALUES (4, 4);
+select * from tbl_prestamos;
