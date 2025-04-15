@@ -610,11 +610,11 @@ BEGIN
 			insert into poblaciones(nombre_poblacion) values (poblacion);
             set @id_poblacion = (select id_poblacion from poblaciones p where p.nombre_poblacion = poblacion);
 		ELSE
-			select "La poblacion ya existe";
+			select concat('La poblacion "', poblacion, '" ya existe');
         end if;
 		insert into editoriales(nombre_editorial, id_poblacion) values (nombreEditorial, @id_poblacion);
     ELSE
-		select "La editorial ya existe";
+		select concat('La editorial "', nombreEditorial, '" ya existe');
 	END IF;
 END $$
 DELIMITER ;
@@ -622,6 +622,9 @@ DELIMITER ;
 drop procedure insertEditorial;
 
 call insertEditorial ("París", "Oh la la");
+delete from editoriales where nombre_editorial = "Oh la la" ;
+delete from poblaciones where nombre_poblacion = "París" ;
+
 
 -- El usuario con id 4 hace un prestamo del libro con id 4
 INSERT INTO prestamos(id_usuario, id_libro)
