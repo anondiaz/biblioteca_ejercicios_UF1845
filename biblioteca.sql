@@ -422,7 +422,7 @@ GROUP BY us.id_usuario;
 USE biblioteca;
 -- Qué usuarios han tomado prestados libros de editoriales de Barcelona
 
-SELECT us.nombre_usuario, us.apellido_usuario, ed.nombre_editorial, po.nombre_poblacion, pr.fecha_prestamo
+SELECT DISTINCT us.numero_carnet, us.nombre_usuario, us.apellido_usuario, ed.nombre_editorial, po.nombre_poblacion, pr.fecha_prestamo
 FROM usuarios us
 NATURAL JOIN prestamos pr
 NATURAL JOIN editoriales ed
@@ -432,7 +432,7 @@ WHERE nombre_poblacion = "Barcelona";
 
 -- Cuántos libros hay de editoriales que no son de Barcelona
 
-SELECT li.titulo, ed.nombre_editorial, po.nombre_poblacion
+SELECT COUNT(li.id_libro)  -- li.titulo, ed.nombre_editorial, po.nombre_poblacion
 FROM libros li
 NATURAL JOIN editoriales ed
 NATURAL JOIN poblaciones po
@@ -441,15 +441,15 @@ WHERE nombre_poblacion NOT IN ("Barcelona");
 -- Cuántos libros tenemos que empiecen por p
 
 SELECT COUNT(id_libro) AS librosConP
-FROM libros WHERE titulo LIKE "P%" OR titulo LIKE "p%";
+FROM libros WHERE titulo LIKE "p%" ;
 
 -- Cuál es el libro más prestado
 
 -- Hacemos una primera querie que nos devuelva los titulos y las cantidades
-SELECT li.titulo, pr.id_libro, COUNT(id_libro) AS MasPrestado -- Seleccionamos titulo, id_libro y el conteo de los prestamos
+SELECT li.titulo, pr.id_libro, COUNT(pr.id_libro) AS MasPrestado -- Seleccionamos titulo, id_libro y el conteo de los prestamos
 FROM prestamos pr -- seleccionamos la primera tabla
 NATURAL JOIN libros li -- Unimos con la segunda tabla
-GROUP BY id_libro -- Agrupamos por id_libro para sumar las repeticiones
+GROUP BY pr.id_libro -- Agrupamos por id_libro para sumar las repeticiones
 -- Una vez que esto funciona vamos a filtrar
 -- Con el having filtramos
 HAVING MasPrestado = -- Establecemos el campo por el que queremos filtrar 
@@ -466,45 +466,64 @@ LIMIT 1; -- Indicamos que solo nos coja el número máximo
 -- ---------------------------------
 -- Qué usuarios han leido el libro más prestado
 
-SELECT us.nombre_usuario, li.titulo, li.id_libro
-FROM libros li
+SELECT DISTINCT us.numero_carnet, us.nombre_usuario, us.apellido_usuario, li.titulo
+FROM usuarios us
 NATURAL JOIN prestamos pr
-NATURAL JOIN usuarios us
-ORDER BY li.id_libro
-WHERE id_libro = (
-SELECT id_libro FROM prestamos GROUP BY id_libro HAVING COUNT(id_libro) = (
-SELECT MAX(MasPrestado) FROM (
-SELECT COUNT(id_libro) AS MasPrestado FROM prestamos GROUP BY id_libro
-) AS listaMasPrestados));
+NATURAL JOIN libros li
+WHERE li.id_libro in (
+SELECT COUNT(pr.id_libro) AS MasPrestado -- Seleccionamos titulo, id_libro y el conteo de los prestamos
+FROM prestamos pr -- seleccionamos la primera tabla
+NATURAL JOIN libros li -- Unimos con la segunda tabla
+GROUP BY pr.id_libro -- Agrupamos por id_libro para sumar las repeticiones
+-- Una vez que esto funciona vamos a filtrar
+-- Con el having filtramos
+HAVING MasPrestado = -- Establecemos el campo por el que queremos filtrar 
+( SELECT COUNT(id_libro) AS MasPrestado FROM prestamos GROUP BY id_libro ORDER BY MasPrestado DESC LIMIT 1 ) -- Esta querie la explico debajo, es la que nos devuelve el numero más grande
+);
 
-SELECT us.nombre_usuario, li.titulo, li.id_libro
-FROM libros li
-NATURAL JOIN prestamos pr
-NATURAL JOIN usuarios us
-WHERE li.id_libro = (
-SELECT id_libro FROM prestamos GROUP BY id_libro HAVING COUNT(id_libro) = (
-SELECT MAX(MasPrestado) FROM (
-SELECT COUNT(id_libro) AS MasPrestado FROM prestamos GROUP BY id_libro
-) AS listaMasPrestados))
-ORDER BY li.id_libro;
+-- SELECT us.nombre_usuario, li.titulo, li.id_libro
+-- FROM libros li
+-- NATURAL JOIN prestamos pr
+-- NATURAL JOIN usuarios us
+-- ORDER BY li.id_libro
+-- WHERE id_libro = (
+-- SELECT id_libro FROM prestamos GROUP BY id_libro HAVING COUNT(id_libro) = (
+-- SELECT MAX(MasPrestado) FROM (
+-- SELECT COUNT(id_libro) AS MasPrestado FROM prestamos GROUP BY id_libro
+-- ) AS listaMasPrestados));
 
--- SELECT id_libro, COUNT(id_libro) AS MasPrestado FROM prestamos NATURAL JOIN libros li GROUP BY id_libro HAVING MasPrestado = (SELECT COUNT(id_libro) AS MasPrestado FROM prestamos GROUP BY id_libro ORDER BY MasPrestado DESC LIMIT 1)
+-- SELECT us.nombre_usuario, li.titulo, li.id_libro
+-- FROM libros li
+-- NATURAL JOIN prestamos pr
+-- NATURAL JOIN usuarios us
+-- WHERE li.id_libro = (
+-- SELECT id_libro FROM prestamos GROUP BY id_libro HAVING COUNT(id_libro) = (
+-- SELECT MAX(MasPrestado) FROM (
+-- SELECT COUNT(id_libro) AS MasPrestado FROM prestamos GROUP BY id_libro
+-- ) AS listaMasPrestados))
+-- ORDER BY li.id_libro;
 
-SELECT id_libro
-FROM prestamos
-GROUP BY id_libro
-ORDER BY COUNT(*) DESC
-LIMIT 1;
+-- -- SELECT id_libro, COUNT(id_libro) AS MasPrestado FROM prestamos NATURAL JOIN libros li GROUP BY id_libro HAVING MasPrestado = (SELECT COUNT(id_libro) AS MasPrestado FROM prestamos GROUP BY id_libro ORDER BY MasPrestado DESC LIMIT 1)
 
-
-
-
+-- SELECT id_libro
+-- FROM prestamos
+-- GROUP BY id_libro
+-- ORDER BY COUNT(*) DESC
+-- LIMIT 1;
 
 
 -- Borra el libro con id_libro = 6
+
 -- Añade la editorial Mondadori, de Milán
+insert into poblaciones(nombre_poblacion) values ('Milán');
+-- Para establecer una variable
+set @idPoblacion = (select id_poblacion from poblaciones where nombre_poblacion = 'Milán');
+insert into editoriales(nombre_editorial, id_poblacion) VALUES ('Mondadori', @idPoblacion);
+
 -- Añade el libro "Ciudadanos", del autor Simón Schama, género "política", editado en 2022
+
 -- Obtén el libro o libros de más reciente publicación
+
 -- Obtén la editorial cuyos libros son los más prestados
 
 -- ----- Hablamos del HAVING -----
@@ -578,7 +597,33 @@ NATURAL JOIN poblaciones po
 SELECT * FROM vista;
 -- DROP VIEW vista;
 
+-- Procedimientos almacenados
+DELIMITER $$
+CREATE PROCEDURE insertEditorial(poblacion varchar(50), nombreEditorial varchar(100))
+BEGIN
+	# Miramos si existe la editorial
+	set @id_editorial = (select id_editorial from editoriales e where e.nombre_editorial = nombreEditorial);
+	if @id_editorial is null THEN
+		# Miramos is existe la población
+		set @id_poblacion = (select id_poblacion from poblaciones p where p.nombre_poblacion = poblacion);
+		if @id_poblacion is null then
+			insert into poblaciones(nombre_poblacion) values (poblacion);
+            set @id_poblacion = (select id_poblacion from poblaciones p where p.nombre_poblacion = poblacion);
+		ELSE
+			select "La poblacion ya existe";
+        end if;
+		insert into editoriales(nombre_editorial, id_poblacion) values (nombreEditorial, @id_poblacion);
+    ELSE
+		select "La editorial ya existe";
+	END IF;
+END $$
+DELIMITER ;
+
+drop procedure insertEditorial;
+
+call insertEditorial ("París", "Oh la la");
+
 -- El usuario con id 4 hace un prestamo del libro con id 4
 INSERT INTO prestamos(id_usuario, id_libro)
-VALUES (4, 4);
+VALUES (4, 2);
 SELECT * FROM prestamos;
