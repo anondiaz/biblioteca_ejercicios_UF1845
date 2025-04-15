@@ -209,6 +209,9 @@ USE biblioteca;
 
 -- ----- Borramos la tabla -----
 -- DROP TABLE editoriales;
+
+-- ALTER TABLE tbl_editoriales RENAME editoriales;
+
 DESCRIBE editoriales;
 
 SELECT editorial FROM libros;
@@ -269,6 +272,8 @@ nombre_poblacion VARCHAR(100) NOT NULL
 USE biblioteca;
 -- ----- Borramos la tabla -----
 -- DROP TABLE poblaciones;
+
+-- ALTER TABLE tbl_poblaciones RENAME poblaciones;
 
 -- Añadimos las poblaciones a las editoriales
 UPDATE editoriales SET ciudad_editorial = 'Barcelona' WHERE nombre_editorial = 'Tusquets';
@@ -334,6 +339,8 @@ USE biblioteca;
 -- ----- Borramos la tabla -----
 -- DROP TABLE usuarios;
 
+-- ALTER TABLE tbl_usuarios RENAME usuarios;
+
 DESCRIBE usuarios;
 
 -- Cambiar id de la tabla libros a id_libro
@@ -356,6 +363,8 @@ fecha_prestamo TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 USE biblioteca;
 -- ----- Borramos la tabla -----
 -- drop table prestamos ;
+
+-- ALTER TABLE tbl_prestamos RENAME prestamos;
 
 DESCRIBE prestamos;
 
@@ -478,7 +487,6 @@ SELECT MAX(MasPrestado) FROM (
 SELECT COUNT(id_libro) AS MasPrestado FROM prestamos GROUP BY id_libro
 ) AS listaMasPrestados))
 ORDER BY li.id_libro;
-
 
 -- SELECT id_libro, COUNT(id_libro) AS MasPrestado FROM prestamos NATURAL JOIN libros li GROUP BY id_libro HAVING MasPrestado = (SELECT COUNT(id_libro) AS MasPrestado FROM prestamos GROUP BY id_libro ORDER BY MasPrestado DESC LIMIT 1)
 
