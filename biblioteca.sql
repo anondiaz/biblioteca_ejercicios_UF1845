@@ -770,9 +770,9 @@ BEGIN
 	DECLARE num_usuarios_prestamo INT UNSIGNED;
 
 -- Prestamos de un usuario
-    SELECT count(id_usuario) INTO num_usuarios_prestamo
+    SELECT count(id_libro) INTO num_usuarios_prestamo
     FROM prestamos
-    WHERE id_libro = f_id_libro group by id_libro;
+    WHERE id_libro = f_id_libro;
 
 -- Devuelve el numero de prestamos
     RETURN num_usuarios_prestamo;
@@ -782,7 +782,67 @@ DELIMITER ;
 
 drop function fnc_libro_prestado_usuarios ;
 
-SELECT count(id_usuario) FROM prestamos WHERE id_libro = 1 ;
+SELECT count(id_libro) FROM prestamos WHERE id_libro = 7;
 
-select fnc_libro_prestado_usuarios(id_libro) AS 'usuarios con el libro' from prestamos WHERE id_libro = 1;
+select distinct fnc_libro_prestado_usuarios(id_libro) AS 'usuarios con el libro' FROM prestamos WHERE id_libro = 1;
+select fnc_libro_prestado_usuarios(1) AS 'usuarios con el libro' ;
+
+-- Crear un StoredProcedure para introducir un Prestamo
+
+DELIMITER $$
+CREATE PROCEDURE insertPrestamo(numeroCarnet INT, tituloLibro varchar(100))
+insPres : BEGIN
+	SET @idUsuario = (SELECT id_usuario FROM usuarios us WHERE us.numero_carnet = numeroCarnet);
+    IF @idUsuario IS NULL THEN
+		SELECT concat("El usuario no existe, se debe dar de alta");
+    ELSE
+		SET @idLibro = (SELECT id_libro FROM libros li WHERE li.titulo = tituloLibro);
+		IF @idLibro is null THEN
+			SELECT concat("Ese libro no existe, no se puede prestar");
+			SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = "Ese libro no existe, no se puede prestar";
+			LEAVE insPres;
+		END IF;
+        INSERT INTO prestamos(id_usuario, id_libro)VALUES (@idUsuario, @idLibro);
+--         SET @idPrestamo = (SELECT id_prestamo FROM prestamos ORDER BY id_prestamo DESC LIMIT 1);
+--         UPDATE prestamos SET fdevolucion_prestamo = DATE_ADD(fecha_prestamo, INTERVAL 2 MONTH) WHERE id_prestamo = @idPrestamo;
+	END IF;
+END insPres$$
+DELIMITER ;
+
+-- DROP PROCEDURE insertPrestamo;
+
+call insertPrestamo (11074101, "Monet");
+call insertPrestamo (48003999, "London. Portrait of a City");
+
+-- 38429026
+-- Poeta en Nueva York
+-- El árbol rojo
+
+
+-- Crear un Trigger para actualizar la fecha de devolución de un prestamo +2 meses
+
+-- ALTER TABLE prestamos ADD COLUMN fdevolucion_prestamo TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+DELIMITER //
+
+CREATE TRIGGER trg_prestamos_fdevolucion
+BEFORE INSERT ON prestamos
+FOR EACH ROW 
+BEGIN
+-- 	SET NEW.fdevolucion_prestamo = 
+-- 		DATE_ADD(NEW.fecha_prestamo, INTERVAL 2 MONTH);
+	SET NEW.fdevolucion_prestamo =
+	TIMESTAMP(
+		DATE_ADD(DATE(NEW.fecha_prestamo), INTERVAL 2 MONTH),
+		'23:59:59');
+END //
+
+DELIMITER ;
+
+-- DROP TRIGGER trg_prestamos_fdevolucion;
+-- SELECT id_usuario, id_libro FROM prestamos WHERE id_prestamo = 8;
+-- UPDATE prestamos SET fdevolucion_prestamo = DATE_ADD(fecha_prestamo, INTERVAL 2 MONTH) WHERE id_prestamo = (
+-- SELECT id_prestamo FROM prestamos ORDER BY id_prestamo DESC LIMIT 1
+-- );
 
