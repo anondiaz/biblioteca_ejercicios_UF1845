@@ -597,7 +597,8 @@ NATURAL JOIN poblaciones po
 SELECT * FROM vista;
 -- DROP VIEW vista;
 
--- Procedimientos almacenados
+-- ----- Procedimientos almacenados -----
+-- Crear un StoredProcedure para introducir una Editorial
 DELIMITER $$
 CREATE PROCEDURE insertEditorial(poblacion varchar(50), nombreEditorial varchar(100))
 BEGIN
@@ -611,7 +612,7 @@ BEGIN
             set @id_poblacion = (select id_poblacion from poblaciones p where p.nombre_poblacion = poblacion);
 		ELSE
 			select concat('La poblacion "', poblacion, '" ya existe');
-        end if;
+        END IF;
 		insert into editoriales(nombre_editorial, id_poblacion) values (nombreEditorial, @id_poblacion);
     ELSE
 		select concat('La editorial "', nombreEditorial, '" ya existe');
@@ -619,14 +620,60 @@ BEGIN
 END $$
 DELIMITER ;
 
-drop procedure insertEditorial;
+-- drop procedure insertEditorial;
 
 call insertEditorial ("París", "Oh la la");
 delete from editoriales where nombre_editorial = "Oh la la" ;
 delete from poblaciones where nombre_poblacion = "París" ;
 
+-- Crear un StoredProcedure para introducir un libro
 
--- El usuario con id 4 hace un prestamo del libro con id 4
+DELIMITER $$
+CREATE PROCEDURE insertLibro(
+tituloLibro varchar(100),
+autorNombre varchar(50),
+autorApellido varchar(100),
+yearEdition YEAR,
+numeroEjemplares smallint,
+nombreGenero varchar(20),
+nombreEditorial varchar(100),
+nombrePoblacion varchar(100)
+)
+
+BEGIN
+	-- Miramos si existe el libro si no procederemos a su inserción
+    SET @id_libro = (SELECT id_libro FROM libros li WHERE li.titulo = tituloLibro);
+    IF @id_libro IS NULL THEN
+		# Miramos si existe la editorial si no debemos llamar al procedimiento almacenado para su creación
+		SET @id_Editorial = (SELECT id_editorial FROM editoriales e WHERE e.nombre_editorial = nombreEditorial);
+ 		IF @id_Editorial IS NULL THEN
+-- 			# Miramos is existe la editorial
+			SELECT concat('La editorial "', nombreEditorial, '" no existe');
+            CALL insertEditorial (nombrePoblacion, nombreEditorial);
+            SET @id_Editorial = (SELECT id_editorial FROM editoriales e WHERE e.nombre_editorial = nombreEditorial);
+ 		ELSE
+  			select concat('La editorial "', nombreEditorial, '" ya existe');
+		END IF;
+ 		SELECT concat('El libro "', tituloLibro, '" no existe');
+        INSERT INTO libros(titulo, autor_nombre, autor_apellido, year_edition, ejemplares, genero, id_editorial) 
+		VALUES (tituloLibro, autorNombre, autorApellido, yearEdition, numeroEjemplares, nombreGenero, @id_Editorial);
+	ELSE
+		SELECT concat('El libro "', tituloLibro, '" ya existe');
+	END IF;
+END $$
+DELIMITER ;
+
+DROP PROCEDURE insertLibro;
+
+
+CALL insertLibro ("Aprende C", "Pepe", "García Lopez", 2004, 2, "programación", "Anaya", "Madrid");
+CALL insertLibro ("Aprende C", "Pepe", "García Lopez", 2004, 2, "programación", "Anaya2", "Barcelona");
+CALL insertLibro ("Aprende SQL", "Paco", "Perez Lopez", 2006, 3, "programación", "Anaya2", "Barcelona");
+CALL insertLibro ("Aprende SQL2", "Paco", "Perez Lopez", 2006, 3, "programación", "Anaya3", "Mataró");
+-- delete from editoriales where nombre_editorial = "Oh la la" ;
+-- delete from poblaciones where nombre_poblacion = "París" ;
+
+-- El usuario con id 4 hace un prestamo del libro con id 4 y otro al 2
 INSERT INTO prestamos(id_usuario, id_libro)
 VALUES (4, 2);
 SELECT * FROM prestamos;
