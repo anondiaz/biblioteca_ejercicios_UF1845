@@ -677,3 +677,112 @@ CALL insertLibro ("Aprende SQL2", "Paco", "Perez Lopez", 2006, 3, "programación
 INSERT INTO prestamos(id_usuario, id_libro)
 VALUES (4, 2);
 SELECT * FROM prestamos;
+
+ALTER TABLE libros
+ADD COLUMN disponibilidad INT UNSIGNED DEFAULT 0;
+
+UPDATE libros SET disponibilidad = ejemplares;
+
+DELIMITER //
+
+CREATE TRIGGER trg_disponibilidad
+BEFORE INSERT ON prestamos
+FOR EACH ROW 
+BEGIN
+
+	DECLARE disponibilidad_libro INT UNSIGNED;
+    
+    SELECT disponibilidad INTO disponibilidad_libro
+    FROM libros
+    WHERE id_libro = new.id_libro;
+    
+    IF disponibilidad_libro <=0 THEN
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = "No hay ejemplares disponibles para este libro";
+	ELSE
+		UPDATE libros SET disponibilidad = disponibilidad - 1 WHERE id_libro = new.id_libro;
+    END IF;
+
+END //
+
+DELIMITER ;
+
+INSERT INTO prestamos(id_usuario, id_libro) VALUES (9, 2);
+
+-- Evitar que un usuario pueda tener más de dos libros en prestamo a la vez
+
+DELIMITER //
+
+CREATE TRIGGER trg_prestamosmax2
+BEFORE INSERT ON prestamos
+FOR EACH ROW 
+FOLLOWS trg_disponibilidad
+BEGIN
+
+	DECLARE usuario_prestamos INT UNSIGNED;
+    
+    SELECT count(id_usuario) INTO usuario_prestamos
+    FROM prestamos
+    WHERE id_usuario = new.id_usuario;
+        
+    IF usuario_prestamos >= 2 THEN
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = "Ya tienes dos libros prestados";
+    END IF;
+
+END //
+
+DELIMITER ;
+
+select count(id_usuario) from prestamos WHERE id_usuario = 4 GROUP BY id_usuario;
+
+DELIMITER //
+
+CREATE FUNCTION fnc_prestamos_usuarios( f_id_usuario INT)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+
+	DECLARE num_prestamos INT UNSIGNED;
+
+-- Prestamos de un usuario
+    SELECT count(id_usuario) INTO num_prestamos
+    FROM prestamos
+    WHERE id_usuario = f_id_usuario;
+
+-- Devuelve el numero de prestamos
+    RETURN num_prestamos;
+
+END //
+DELIMITER ;
+
+SELECT nombre_usuario, apellido_usuario, fnc_prestamos_usuarios(id_usuario) AS "libros prestados"  FROM usuarios;
+
+-- Crear una función que devuelva cuantos usuarios tienen prestado un libro
+
+DELIMITER //
+
+CREATE FUNCTION fnc_libro_prestado_usuarios( f_id_libro INT)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+
+	DECLARE num_usuarios_prestamo INT UNSIGNED;
+
+-- Prestamos de un usuario
+    SELECT count(id_usuario) INTO num_usuarios_prestamo
+    FROM prestamos
+    WHERE id_libro = f_id_libro group by id_libro;
+
+-- Devuelve el numero de prestamos
+    RETURN num_usuarios_prestamo;
+
+END //
+DELIMITER ;
+
+drop function fnc_libro_prestado_usuarios ;
+
+SELECT count(id_usuario) FROM prestamos WHERE id_libro = 1 ;
+
+select fnc_libro_prestado_usuarios(id_libro) AS 'usuarios con el libro' from prestamos WHERE id_libro = 1;
+
