@@ -841,8 +841,13 @@ BEGIN
     and id_usuario =new.id_usuario
     and fecha_devolucion is null;
 
-
+	if retraso < 0 then
+ 			SIGNAL SQLSTATE '45000'
+ 			SET MESSAGE_TEXT = "Tienes un libro pendiente de devolver";
+    else
+    
 	SET NEW.fecha_devolucion_prevista = DATE_ADD(NEW.fecha_prestamo, INTERVAL 7 DAY);
+    end if;
 	-- SET NEW.fdevolucion_prestamo =
 -- 	TIMESTAMP(
 -- 		DATE_ADD(DATE(NEW.fecha_prestamo), INTERVAL 2 MONTH),
