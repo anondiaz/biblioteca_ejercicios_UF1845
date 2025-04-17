@@ -789,31 +789,31 @@ select fnc_libro_prestado_usuarios(1) AS 'usuarios con el libro' ;
 
 -- Crear un StoredProcedure para introducir un Prestamo
 
-DELIMITER $$
-CREATE PROCEDURE insertPrestamo(numeroCarnet INT, tituloLibro varchar(100))
-insPres : BEGIN
-	SET @idUsuario = (SELECT id_usuario FROM usuarios us WHERE us.numero_carnet = numeroCarnet);
-    IF @idUsuario IS NULL THEN
-		SELECT concat("El usuario no existe, se debe dar de alta");
-    ELSE
-		SET @idLibro = (SELECT id_libro FROM libros li WHERE li.titulo = tituloLibro);
-		IF @idLibro is null THEN
-			SELECT concat("Ese libro no existe, no se puede prestar");
-			SIGNAL SQLSTATE '45000'
-			SET MESSAGE_TEXT = "Ese libro no existe, no se puede prestar";
-			LEAVE insPres;
-		END IF;
-        INSERT INTO prestamos(id_usuario, id_libro)VALUES (@idUsuario, @idLibro);
---         SET @idPrestamo = (SELECT id_prestamo FROM prestamos ORDER BY id_prestamo DESC LIMIT 1);
---         UPDATE prestamos SET fdevolucion_prestamo = DATE_ADD(fecha_prestamo, INTERVAL 2 MONTH) WHERE id_prestamo = @idPrestamo;
-	END IF;
-END insPres$$
-DELIMITER ;
+-- DELIMITER $$
+-- CREATE PROCEDURE insertPrestamo(numeroCarnet INT, tituloLibro varchar(100))
+-- insPres : BEGIN
+-- 	SET @idUsuario = (SELECT id_usuario FROM usuarios us WHERE us.numero_carnet = numeroCarnet);
+--     IF @idUsuario IS NULL THEN
+-- 		SELECT concat("El usuario no existe, se debe dar de alta");
+--     ELSE
+-- 		SET @idLibro = (SELECT id_libro FROM libros li WHERE li.titulo = tituloLibro);
+-- 		IF @idLibro is null THEN
+-- 			SELECT concat("Ese libro no existe, no se puede prestar");
+-- 			SIGNAL SQLSTATE '45000'
+-- 			SET MESSAGE_TEXT = "Ese libro no existe, no se puede prestar";
+-- 			LEAVE insPres;
+-- 		END IF;
+--         INSERT INTO prestamos(id_usuario, id_libro)VALUES (@idUsuario, @idLibro);
+-- --         SET @idPrestamo = (SELECT id_prestamo FROM prestamos ORDER BY id_prestamo DESC LIMIT 1);
+-- --         UPDATE prestamos SET fdevolucion_prestamo = DATE_ADD(fecha_prestamo, INTERVAL 2 MONTH) WHERE id_prestamo = @idPrestamo;
+-- 	END IF;
+-- END insPres$$
+-- DELIMITER ;
 
 -- DROP PROCEDURE insertPrestamo;
 
-call insertPrestamo (11074101, "Monet");
-call insertPrestamo (48003999, "London. Portrait of a City");
+-- call insertPrestamo (11074101, "Monet");
+-- call insertPrestamo (48003999, "London. Portrait of a City");
 
 -- 38429026
 -- Poeta en Nueva York
@@ -822,27 +822,46 @@ call insertPrestamo (48003999, "London. Portrait of a City");
 
 -- Crear un Trigger para actualizar la fecha de devolución de un prestamo +2 meses
 
--- ALTER TABLE prestamos ADD COLUMN fdevolucion_prestamo TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE prestamos ADD COLUMN fdevolucion_prestamo TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE prestamos MODIFY COLUMN fdevolucion_prestamo DATETIME;
+ALTER TABLE prestamos RENAME COLUMN fdevolucion_prestamo TO fecha_devolucion;
+ALTER TABLE prestamos MODIFY COLUMN fecha_prestamo TIMESTAMP DEFAULT CURRENT_TIMESTAMP ;
+ALTER TABLE prestamos ADD COLUMN fecha_devolucion_prevista TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 DELIMITER //
 
-CREATE TRIGGER trg_prestamos_fdevolucion
+CREATE TRIGGER tr_fecha_devolucion
 BEFORE INSERT ON prestamos
-FOR EACH ROW 
+FOR EACH ROW
 BEGIN
--- 	SET NEW.fdevolucion_prestamo = 
--- 		DATE_ADD(NEW.fecha_prestamo, INTERVAL 2 MONTH);
-	SET NEW.fdevolucion_prestamo =
-	TIMESTAMP(
-		DATE_ADD(DATE(NEW.fecha_prestamo), INTERVAL 2 MONTH),
-		'23:59:59');
+	declare idusuario int;
+    select id_usuario into idusuario
+    from prestamos
+    where fecha_devolucion_prevista < current_date()
+    and id_usuario =new.id_usuario
+    and fecha_devolucion is null;
+
+
+	SET NEW.fecha_devolucion_prevista = DATE_ADD(NEW.fecha_prestamo, INTERVAL 7 DAY);
+	-- SET NEW.fdevolucion_prestamo =
+-- 	TIMESTAMP(
+-- 		DATE_ADD(DATE(NEW.fecha_prestamo), INTERVAL 2 MONTH),
+-- 		'23:59:59');
 END //
 
 DELIMITER ;
 
+SELECT id_prestamo FROM prestamos WHERE fecha_devolucion_prevista < current_date() AND id_usuario = NEW.id_usuario;
+
 -- DROP TRIGGER trg_prestamos_fdevolucion;
+-- DROP TRIGGER tr_fecha_devolucion;
 -- SELECT id_usuario, id_libro FROM prestamos WHERE id_prestamo = 8;
 -- UPDATE prestamos SET fdevolucion_prestamo = DATE_ADD(fecha_prestamo, INTERVAL 2 MONTH) WHERE id_prestamo = (
 -- SELECT id_prestamo FROM prestamos ORDER BY id_prestamo DESC LIMIT 1
 -- );
 
+use biblioteca;
+truncate prestamos;
+select * from prestamos;
+
+INSERT INTO prestamos(id_usuario, id_libro) VALUES (2, 1);
